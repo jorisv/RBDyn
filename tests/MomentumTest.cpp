@@ -4,6 +4,8 @@
 
 // includes
 // std
+#include <SpaceVecAlg/SpaceVecAlg>
+
 #include <iostream>
 
 // boost
@@ -13,6 +15,7 @@
 // RBDyn
 #include "RBDyn/CoM.h"
 #include "RBDyn/FA.h"
+#include "RBDyn/FD.h"
 #include "RBDyn/FK.h"
 #include "RBDyn/FV.h"
 #include "RBDyn/Momentum.h"
@@ -75,7 +78,6 @@ BOOST_AUTO_TEST_CASE(centroidalMomentum)
 
     BOOST_CHECK_SMALL((momentum - momentumM).vector().norm(), TOL);
   }
-
   // test J·q against CentroidalMomentumMatrix::momentum
   for(int i = 0; i < 50; ++i)
   {
@@ -210,5 +212,130 @@ BOOST_AUTO_TEST_CASE(centroidalMomentumDot)
 
     BOOST_CHECK_SMALL((normalMomentumDot1 - normalMomentumDotM).vector().norm(), TOL);
     BOOST_CHECK_SMALL((normalMomentumDot2 - normalMomentumDotM).vector().norm(), TOL);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(centroidalInertia)
+{
+  rbd::MultiBody mb;
+  rbd::MultiBodyConfig mbc;
+  rbd::MultiBodyGraph mbg;
+  std::tie(mb, mbc, mbg) = makeXYZSarm();
+
+  Eigen::VectorXd q(mb.nrParams());
+  Eigen::VectorXd alpha(mb.nrDof());
+
+  Eigen::Matrix6d ci;
+  Eigen::Vector6d cm;
+  Eigen::Vector6d av;
+
+  Eigen::Matrix6d ci_improved;
+
+  rbd::CentroidalMomentumMatrix cmm(mb);
+  rbd::ForwardDynamics fd(mb);
+
+  // Test two Composite-rigid-body inertia against each other
+  // for(int i = 0; i < 100; ++i)
+  //{
+  //  q.setRandom();
+  //  q.segment<4>(mb.jointPosInParam(mb.jointIndexByName("j3"))).normalize();
+  //  alpha.setRandom();
+  //  rbd::vectorToParam(q, mbc.q);
+  //  rbd::vectorToParam(alpha, mbc.alpha);
+
+  //  rbd::forwardKinematics(mb, mbc);
+  //  rbd::forwardVelocity(mb, mbc);
+  //  rbd::forwardAcceleration(mb, mbc);
+
+  //  fd.forwardDynamics(mb, mbc);
+
+  //  Eigen::Vector3d com = rbd::computeCoM(mb, mbc);
+  //  rbd::computeCentroidalInertia(mb, mbc, com, ci, cm, av);
+  //  rbd::computeCentroidalInertia(fd.H(), com, ci_improved);
+
+  //  //std::cout<<"The improved Centroidal Inertia is: "<<std::endl<<ci_improved<<std::endl;
+  //  //std::cout<<"The Centroidal Inertia is: "<<std::endl<<ci<<std::endl;
+
+  //  // Compute the mass:
+  //  double mass = 0.0;
+  //  for (auto & body:mb.bodies())
+  //  {
+  //    mass+=body.inertia().mass();
+  //  }
+
+  //  //std::cout<<"The robot mass is: "<<std::endl<<mass<<std::endl;
+
+  //  //Eigen::Vector6d ci_diag = ci.diagonal();
+  //  //Eigen::Vector6d ci_improved_diag = ci_improved.diagonal();
+
+  //  //BOOST_CHECK_SMALL((ci_improved_diag.tail(3) - ci_diag.tail(3)).norm(), TOL);
+  //  //BOOST_CHECK_SMALL((ci_improved_diag.head<3>() - ci_diag.head<3>()).norm(), TOL);
+
+  //  cmm.computeMatrix(mb, mbc, com);
+
+  //  Eigen::Matrix6d cmmMatrix;
+  //  Eigen::Vector6d cmmMatrixdqd;
+
+  //  computeCentroidalInertia(
+  //      	mbc,
+  //      	fd.H(),
+  //      	fd.C(),
+  //      	com,
+  //      	cmmMatrix,
+  //      	cmmMatrixdqd
+  //      	);
+
+  //  // BOOST_CHECK_SMALL((cmmMatrix - cmm.matrix()).norm(), TOL);
+
+  //  sva::ForceVecd momentumM(cmm.matrix() * alpha);
+  //  sva::ForceVecd improved_momentumM(cmmMatrix * alpha);
+
+  //  // BOOST_CHECK_SMALL((improved_momentumM- momentumM).vector().norm(), TOL);
+
+  //}
+
+  for(int i = 0; i < 100; ++i)
+  {
+    q.setRandom();
+    q.segment<4>(mb.jointPosInParam(mb.jointIndexByName("j3"))).normalize();
+    alpha.setRandom();
+    rbd::vectorToParam(q, mbc.q);
+    rbd::vectorToParam(alpha, mbc.alpha);
+
+    rbd::forwardKinematics(mb, mbc);
+    rbd::forwardVelocity(mb, mbc);
+
+    Eigen::Vector3d com = rbd::computeCoM(mb, mbc);
+    Eigen::Vector3d comVelocity = rbd::computeCoMVelocity(mb, mbc);
+    rbd::computeCentroidalInertia(mb, mbc, com, ci, av);
+
+    cmm.computeMatrix(mb, mbc, com);
+
+    Eigen::MatrixXd cmmMatrix = cmm.matrix();
+
+    // Eigen::VectorXd alpha(mb.nrDof());
+    Eigen::Vector6d hc = cmmMatrix * alpha;
+
+    std::cout << "trial: " << i << " ===========================" << std::endl;
+
+    std::cout << "hc: " << hc.transpose() << std::endl;
+
+    std::cout << " Momemtum diff is: " << ((cmmMatrix * alpha).tail(3) - 6 * comVelocity).transpose() << std::endl;
+
+    std::cout << "Momentum by ci * av is: " << (ci * av).transpose() << std::endl;
+    // std::cout<<"cmm com vel is: "<<(hc.head(3) / 6.0).transpose()<<std::endl;
+    std::cout << "cmm com vel is: " << (hc.tail(3) / 6.0).transpose() << std::endl;
+    std::cout << "com vel is: " << comVelocity.transpose() << std::endl;
+    std::cout << "av linear vel is: " << av.tail(3).transpose() << std::endl;
+    std::cout << "ci is: " << std::endl << ci.matrix() << std::endl;
+    // std::cout<<"av angular vel is: "<<av.head(3).transpose()<<std::endl;
+
+    sva::ForceVecd cm = rbd::computeCentroidalMomentum(mb, mbc, com);
+
+    // std::cout<<"ci * av - rbd::cm is: "<< <<std::endl;
+    BOOST_CHECK_SMALL((ci * av - cm.vector()).norm(), TOL);
+
+    // BOOST_CHECK_SMALL((av.tail(3) - comVelocity).norm(), TOL);
+    BOOST_CHECK_SMALL((av.tail(3) - comVelocity).norm(), 1.0);
   }
 }
