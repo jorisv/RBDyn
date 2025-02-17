@@ -4,11 +4,11 @@ repos:
   - id: check-useless-excludes
   - id: check-hooks-apply
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v17.0.6
+  rev: v19.1.7
   hooks:
   - id: clang-format
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v5.0.0
   hooks:
   - id: check-added-large-files
   - id: check-ast
@@ -23,16 +23,16 @@ repos:
   - id: mixed-line-ending
   - id: trailing-whitespace
 - repo: https://github.com/psf/black
-  rev: 24.2.0
+  rev: 25.1.0
   hooks:
   - id: black
 - repo: https://github.com/MarcoGorelli/cython-lint
-  rev: v0.16.0
+  rev: v0.16.6
   hooks:
   - id: cython-lint
   - id: double-quote-cython-strings
 - repo: https://github.com/PyCQA/flake8
-  rev: 7.0.0
+  rev: 7.1.2
   hooks:
   - id: flake8
     exclude: ^binding/python/rbdyn/.*__init__.py
