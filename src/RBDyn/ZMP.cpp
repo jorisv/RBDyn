@@ -49,7 +49,7 @@ Eigen::Vector3d computeCentroidalZMPComplete(MultiBodyConfig & mbc,
   denom = mass * g - wr_external.force()(2);
   zmp(0) = com(0) - ((com(2) - altitude) * comA(0) * (mass * g / denom)) / (comA(2)) + wr_external.couple()(1) / denom
            + com(2) * wr_external.force()(0) / denom;
-  zmp(1) = com(1) - ((com(2) - altitude) * comA(1) * (mass * g / denom)) / (comA(2)) - wr_external.couple()(0) / denom
+  zmp(1) = com(1) - ((com(2) - altitude) * comA(1) * (mass * g / denom)) / (comA(2))-wr_external.couple()(0) / denom
            + com(2) * wr_external.force()(1) / denom;
   zmp(2) = altitude;
   return zmp;
